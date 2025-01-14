@@ -32,6 +32,7 @@ export default function HomePage() {
     };
 
     recognition.onresult = (event) => {
+      console.log("event : " + event);
       const transcript = event.results[0][0].transcript;
       console.log('인식 결과:', transcript);
       setPrompt(transcript);
