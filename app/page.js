@@ -66,6 +66,7 @@ export default function HomePage() {
    * 3) ChatGPT API 호출
    */
   const callChatGPT = async () => {
+    console.log("prompt : " + prompt)
     if (!prompt.trim()) {
       alert('질문(프롬프트)을 입력하거나 음성으로 말해보세요.');
       return;
