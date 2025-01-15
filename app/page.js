@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useRef } from 'react';
 
 export default function HomePage() {
@@ -8,10 +7,9 @@ export default function HomePage() {
   const [recording, setRecording] = useState(false);
 
   const recognitionRef = useRef(null);
+  // 최신 transcript를 저장할 Ref
+  const currentTranscriptRef = useRef('');
 
-  /**
-   * 1) 브라우저 음성 인식 (STT)
-   */
   const startRecording = () => {
     if (!('webkitSpeechRecognition' in window)) {
       alert('이 브라우저는 음성 인식을 지원하지 않습니다.');
@@ -21,10 +19,9 @@ export default function HomePage() {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = 'en-US'; // 영어 인식
+    recognition.lang = 'en-US';
 
     recognition.onstart = () => {
       setRecording(true);
@@ -32,63 +29,56 @@ export default function HomePage() {
     };
 
     recognition.onresult = (event) => {
-      console.log("event : " + event);
       const transcript = event.results[0][0].transcript;
-      console.log('인식 결과:', transcript);
+      console.log('onresult - 인식 결과:', transcript);
+      // state 업데이트 + Ref 동시 저장
       setPrompt(transcript);
+      currentTranscriptRef.current = transcript;
+    };
+
+    recognition.onerror = (e) => {
+      console.error('녹음 에러:', e.error);
+      setRecording(false);
     };
 
     recognition.onend = () => {
       setRecording(false);
-      console.log('녹음 종료');
-    };
-
-    recognition.onerror = (event) => {
-      console.error('녹음 에러:', event.error);
-      setRecording(false);
+      console.log('녹음 종료(onend)');
+      // 여기서 Ref에 있는 transcript를 사용
+      const finalTranscript = currentTranscriptRef.current;
+      if (finalTranscript.trim()) {
+        callChatGPT(finalTranscript);
+      } else {
+        console.log('No recognized text, skip callChatGPT.');
+      }
     };
 
     recognition.start();
     recognitionRef.current = recognition;
   };
 
-  /**
-   * 2) "Stop Recording" 시 자동으로 ChatGPT API 호출
-   */
   const stopRecording = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
-      setRecording(false);
-      callChatGPT(); // 음성 인식이 끝난 후 API 호출
+      recognitionRef.current = null;
+      console.log('Stop Recording → recognition.stop()');
     }
   };
 
-  /**
-   * 3) ChatGPT API 호출
-   */
-  const callChatGPT = async () => {
-    console.log("prompt : " + prompt)
-    if (!prompt.trim()) {
-      alert('질문(프롬프트)을 입력하거나 음성으로 말해보세요.');
-      return;
-    }
-
+  const callChatGPT = async (spokenText) => {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: spokenText }),
       });
-
       if (!res.ok) {
-        console.error('API Error:', await res.text());
-        throw new Error('API request failed');
+        const errMsg = await res.text();
+        console.error('API Error:', errMsg);
+        throw new Error(errMsg);
       }
-
       const data = await res.json();
       setResponse(data.response);
-
-      // 자동 음성 출력
       speakText(data.response);
     } catch (error) {
       console.error('Error calling ChatGPT:', error);
@@ -96,16 +86,13 @@ export default function HomePage() {
     }
   };
 
-  /**
-   * 4) 브라우저 음성 출력 (TTS)
-   */
   const speakText = (text) => {
     if (!window.speechSynthesis) {
       alert('이 브라우저는 음성 출력을 지원하지 않습니다.');
       return;
     }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US'; // 영어 음성
+    utterance.lang = 'en-US';
     window.speechSynthesis.speak(utterance);
   };
 
@@ -129,14 +116,14 @@ export default function HomePage() {
             className="bg-green-500 text-white px-4 py-2 rounded mr-2 hover:bg-green-600"
             onClick={startRecording}
           >
-            Start Recording
+            말하기 시작하기 버튼
           </button>
         ) : (
           <button
             className="bg-red-500 text-white px-4 py-2 rounded mr-2 hover:bg-red-600"
             onClick={stopRecording}
           >
-            Stop Recording
+           그만 말하기 버튼
           </button>
         )}
       </div>
@@ -146,7 +133,6 @@ export default function HomePage() {
           {response}
         </div>
       </div>
-      {/* Speak Response 버튼 제거 */}
     </div>
   );
 }
