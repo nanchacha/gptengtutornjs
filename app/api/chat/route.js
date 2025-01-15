@@ -12,13 +12,14 @@ export async function POST(request) {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+    const threeLine = " in three lines."
 
     // v4에서는 createChatCompletion → chat.completions.create(...) 으로 바뀜
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'You are a helpful English speaking assistant.' },
-        { role: 'user', content: prompt },
+        { role: 'system', content: 'You are a helpful English speaking tutor. Your name is Seung Ae Lee' },
+        { role: 'user', content: prompt+threeLine },
       ],
     });
 
