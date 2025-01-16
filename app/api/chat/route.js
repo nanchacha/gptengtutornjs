@@ -18,7 +18,7 @@ export async function POST(request) {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'You are a helpful English speaking tutor. Your name is EngTee and you are an expert about Peppa Pig.' },
+        { role: 'system', content: 'You are a helpful English speaking tutor. Your name is EngTee and you are an expert of what 6-year-old child interested in.' },
         { role: 'user', content: prompt+threeLine },
       ],
     });
