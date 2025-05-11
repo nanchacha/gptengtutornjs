@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export default function HomePage() {
+  const [imageUrl, setImageUrl] = useState(null); // 이미지 상태 추가
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [recording, setRecording] = useState(false);
@@ -10,6 +11,30 @@ export default function HomePage() {
   const recognitionRef = useRef(null);
   const transcriptRef = useRef(''); // 최신 transcript 관리
   const isAPICalledRef = useRef(false); // API 호출 여부 추적
+
+  // Unsplash API로 이미지 가져오기
+  async function fetchImageFromUnsplash(keyword) {
+    const accessKey = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY || 'YOUR_UNSPLASH_ACCESS_KEY'; // 환경변수 권장
+    if (!accessKey || accessKey === 'YOUR_UNSPLASH_ACCESS_KEY') return null;
+    try {
+      const res = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&client_id=${accessKey}`
+      );
+      const data = await res.json();
+      return data.results?.[0]?.urls?.small || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 프롬프트가 바뀔 때마다 이미지 검색
+  useEffect(() => {
+    if (prompt.trim()) {
+      fetchImageFromUnsplash(prompt).then(setImageUrl);
+    } else {
+      setImageUrl(null);
+    }
+  }, [prompt]);
 
   /**
    * 1) 브라우저 음성 인식 (STT)
@@ -160,6 +185,25 @@ export default function HomePage() {
 
   return (
     <div className="max-w-lg mx-auto p-4">
+      {/* 이미지 표시 영역 */}
+      <div
+        style={{
+          width: 300,
+          height: 200,
+          border: '1px solid #ccc',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 16,
+          background: '#f9f9f9',
+        }}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt="Related visual" style={{ maxWidth: '100%', maxHeight: '100%' }} />
+        ) : (
+          <span style={{ color: '#aaa' }}>선생님이 생각하는 이미지를 검색하는 중</span>
+        )}
+      </div>
       <h1 className="text-2xl font-bold mb-4">
         ChatGPT English Speaking Demo (with ElevenLabs)
       </h1>
